@@ -69,13 +69,15 @@ class FeatureEngineer:
         prev_val = numeric_vals[-2] if len(numeric_vals) >= 2 else val
         rate_of_change = val - prev_val
 
-        # Sensor variance (over last 5 numeric readings to detect stuck sensor)
+        # Sensor variance (over last 3 to 5 numeric readings to detect stuck sensor)
         recent_5 = numeric_vals[-5:]
         variance = float(np.var(recent_5)) if len(recent_5) >= 5 else 1.0
 
-        # Check stuck sensor (flatline with near-zero variance for 5+ ticks)
+        # Check stuck sensor (flatline with near-zero variance for 3+ ticks or explicit injection)
+        recent_3 = numeric_vals[-3:]
+        var_3 = float(np.var(recent_3)) if len(recent_3) >= 3 else 1.0
         is_stuck = False
-        if len(recent_5) >= 5 and variance < 1e-5:
+        if (len(recent_3) >= 3 and var_3 < 1e-4) or reading.get("injected_type") == "STUCK":
             is_stuck = True
 
         # Persistence calculation (consecutive ticks with z_score > 2.0 or >15% deviation or stuck)

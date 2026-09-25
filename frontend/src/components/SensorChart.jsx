@@ -11,8 +11,10 @@ import {
 } from 'recharts';
 import { LineChart as LineChartIcon } from 'lucide-react';
 
-export function SensorChart({ historyData = [], selectedMachine = 'CNC-M01', onSelectMachine }) {
+export function SensorChart({ historyData = [], selectedMachine = 'CNC-M01', onSelectMachine, machineStatus = 'NORMAL' }) {
   const [activeTab, setActiveTab] = useState('ALL'); // ALL, TEMP, VIB, RPM, POWER
+
+  const isStopped = machineStatus === 'STOPPED';
 
   const formattedData = (historyData || []).map((item) => {
     const dt = new Date(item.timestamp);
@@ -35,7 +37,17 @@ export function SensorChart({ historyData = [], selectedMachine = 'CNC-M01', onS
     timeGroupedMap[d.time][d.sensor] = d.value;
   });
 
-  const chartData = Object.values(timeGroupedMap);
+  const chartData = isStopped
+    ? Object.values(timeGroupedMap).map(row => ({
+        ...row,
+        rpm: 0,
+        vibration: 0,
+        power: 0,
+        temperature: 25.0,
+        voltage: 0,
+        feed_rate: 0
+      }))
+    : Object.values(timeGroupedMap);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
@@ -44,9 +56,20 @@ export function SensorChart({ historyData = [], selectedMachine = 'CNC-M01', onS
           <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
             <LineChartIcon className="w-5 h-5 text-blue-400" />
             Live CNC Sensor Trends ({selectedMachine})
+            {isStopped ? (
+              <span className="ml-2 px-2 py-0.5 bg-slate-800 text-slate-400 border border-slate-700 text-[11px] font-mono rounded font-bold">
+                ● STOPPED (OFFLINE)
+              </span>
+            ) : (
+              <span className="ml-2 px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800/60 text-[11px] font-mono rounded font-bold">
+                ● LIVE STREAMING
+              </span>
+            )}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Synchronized multi-channel streaming telemetry showing physical baseline vs active deviations.
+            {isStopped
+              ? 'Machine is STOPPED — live sensor telemetry stream is halted and zeroed.'
+              : 'Synchronized multi-channel streaming telemetry showing physical baseline vs active deviations.'}
           </p>
         </div>
 

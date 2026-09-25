@@ -66,6 +66,12 @@ machine_health_scores = {
     "CNC-M03": 97
 }
 
+machine_operational_states = {
+    "CNC-M01": "RUNNING",
+    "CNC-M02": "RUNNING",
+    "CNC-M03": "RUNNING"
+}
+
 simulation_task: Optional[asyncio.Task] = None
 
 class InjectRequest(BaseModel):
@@ -73,6 +79,10 @@ class InjectRequest(BaseModel):
     anomaly_type: str = "SPIKE" # SPIKE, DRIFT, DROPOUT, STUCK, MULTI_SENSOR, ALERT_FLOOD, NORMAL
     sensor: str = "temperature"
     duration_ticks: int = 20
+
+class MachineControlRequest(BaseModel):
+    machine_id: str = "CNC-M01"
+    action: str = "STOP" # START, STOP, RESTART
 
 def compute_operational_health(machine_id: str, readings_dict: dict, active_alerts: list) -> int:
     """
@@ -130,7 +140,7 @@ async def shutdown_event():
 async def run_simulation_loop():
     while True:
         try:
-            readings = generator.generate_tick()
+            readings = generator.generate_tick(machine_operational_states)
             conn = get_db_connection()
             cursor = conn.cursor()
 
@@ -152,9 +162,14 @@ async def run_simulation_loop():
             tick_anomalies = []
             
             for r in readings:
-                feat = feature_engineer.process_reading(r)
                 m_id = r["machine_id"]
                 s_id = r["sensor"]
+                
+                # If machine is STOPPED, skip anomaly detection and active alert generation
+                if machine_operational_states.get(m_id) == "STOPPED":
+                    continue
+
+                feat = feature_engineer.process_reading(r)
                 
                 # 1. Statistical Detection
                 is_stat, stat_reason = stat_detector.detect(feat)
@@ -235,19 +250,23 @@ async def run_simulation_loop():
 
             # Update Machine overall statuses and health scores
             for m in ["CNC-M01", "CNC-M02", "CNC-M03"]:
-                m_sevs = [row["severity"] for row in active_alerts_list if row["machine_id"] == m]
-                if "CRITICAL" in m_sevs:
-                    machine_statuses[m] = "CRITICAL"
-                elif "HIGH" in m_sevs:
-                    machine_statuses[m] = "HIGH"
-                elif "MEDIUM" in m_sevs:
-                    machine_statuses[m] = "MEDIUM"
+                if machine_operational_states.get(m) == "STOPPED":
+                    machine_statuses[m] = "STOPPED"
+                    machine_health_scores[m] = 100
                 else:
-                    machine_statuses[m] = "NORMAL"
+                    m_sevs = [row["severity"] for row in active_alerts_list if row["machine_id"] == m]
+                    if "CRITICAL" in m_sevs:
+                        machine_statuses[m] = "CRITICAL"
+                    elif "HIGH" in m_sevs:
+                        machine_statuses[m] = "HIGH"
+                    elif "MEDIUM" in m_sevs:
+                        machine_statuses[m] = "MEDIUM"
+                    else:
+                        machine_statuses[m] = "NORMAL"
 
-                machine_health_scores[m] = compute_operational_health(
-                    m, machine_vectors.get(m, {}), active_alerts_list
-                )
+                    machine_health_scores[m] = compute_operational_health(
+                        m, machine_vectors.get(m, {}), active_alerts_list
+                    )
 
             conn.close()
 
@@ -361,6 +380,26 @@ def flood_alerts(machine_id: str = "CNC-M01", sensor: str = "temperature"):
         "description": "25 rapid anomaly bursts injected to demonstrate real-time fatigue deduplication."
     }
 
+@app.post("/api/machines/control")
+def control_machine(req: MachineControlRequest):
+    m_id = req.machine_id
+    act = req.action.upper().strip()
+    if act == "STOP":
+        machine_operational_states[m_id] = "STOPPED"
+        machine_statuses[m_id] = "STOPPED"
+        machine_health_scores[m_id] = 100
+        # Immediately resolve active alerts for stopped machine to halt live severity
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE alerts SET status = 'RESOLVED' WHERE machine_id = ? AND status = 'ACTIVE'", (m_id,))
+        conn.commit()
+        conn.close()
+    elif act in ["START", "RESTART"]:
+        machine_operational_states[m_id] = "RUNNING"
+        machine_statuses[m_id] = "NORMAL"
+        machine_health_scores[m_id] = 98
+    return {"status": "success", "machine_id": m_id, "state": machine_operational_states[m_id]}
+
 @app.post("/api/demo/reset")
 def reset_demo():
     res = injector.reset_all()
@@ -368,6 +407,7 @@ def reset_demo():
     for k in feature_engineer.persistence_counters:
         feature_engineer.persistence_counters[k] = 0
     for m in machine_statuses:
+        machine_operational_states[m] = "RUNNING"
         machine_statuses[m] = "NORMAL"
         machine_health_scores[m] = 98
     conn = get_db_connection()

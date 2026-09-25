@@ -148,7 +148,7 @@ export function DemoPanel({ selectedMachine = 'CNC-M01', onTriggerComplete }) {
         {/* [ INJECT CRITICAL EVENT ] */}
         <button
           disabled={loading}
-          onClick={() => handleInject('MULTI_SENSOR')}
+          onClick={() => handleInject('CRITICAL')}
           className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-red-950/70 hover:bg-red-900/90 text-red-200 font-bold rounded-lg border border-red-700 transition shadow-lg shadow-red-950/60 disabled:opacity-50 animate-pulse"
         >
           <AlertOctagon className="w-3.5 h-3.5 text-red-400" />

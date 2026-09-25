@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Activity, Radio, FileText } from 'lucide-react';
 import { SummaryCards } from '../components/SummaryCards';
 import { DemoPanel } from '../components/DemoPanel';
+
 import { DigitalTwin } from '../components/DigitalTwin';
 import { SensorChart } from '../components/SensorChart';
 import { AlertFeed } from '../components/AlertFeed';
@@ -63,11 +64,24 @@ export function DashboardPage({ onViewReports }) {
     return () => { if (ws) ws.close(); };
   }, []);
 
-  const currentReadings = {};
-  liveReadings
-    .filter((r) => r.machine_id === selectedMachine)
-    .forEach((r) => { currentReadings[r.sensor] = r.value; });
+  // Build per-machine live reading maps
+  const machineReadings = {};
+  ['CNC-M01', 'CNC-M02', 'CNC-M03'].forEach((m) => {
+    machineReadings[m] = {};
+    liveReadings
+      .filter((r) => r.machine_id === m)
+      .forEach((r) => { machineReadings[m][r.sensor] = r.value; });
+  });
 
+  // Count active alerts per machine
+  const alertCounts = {};
+  ['CNC-M01', 'CNC-M02', 'CNC-M03'].forEach((m) => {
+    alertCounts[m] = (activeAlerts || []).filter(
+      (a) => a.machine_id === m && a.status === 'ACTIVE'
+    ).length;
+  });
+
+  const currentReadings = machineReadings[selectedMachine] || {};
   const currentStatus = machineStatuses[selectedMachine] || 'NORMAL';
   const currentHealthPct = machineHealth[selectedMachine] || 98;
   const availability = Math.min(100, Math.max(60, currentHealthPct - 2));
@@ -117,6 +131,8 @@ export function DashboardPage({ onViewReports }) {
         onTriggerComplete={() => { fetchSensorHistory(selectedMachine, 40).then(setSensorHistory); }}
       />
 
+
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
         <div className="lg:col-span-8">
           <DigitalTwin
@@ -145,6 +161,7 @@ export function DashboardPage({ onViewReports }) {
           historyData={sensorHistory}
           selectedMachine={selectedMachine}
           onSelectMachine={setSelectedMachine}
+          machineStatus={currentStatus}
         />
       </div>
 

@@ -5,24 +5,28 @@ class AlertRoutingEngine:
         if severity == "CRITICAL":
             return {
                 "route": "URGENT",
-                "responsible_team": "Operations / Maintenance",
+                "responsible_team": "Maintenance Engineer + Production Supervisor",
+                "action": "Take immediate action and check/stop the machine if required",
                 "reason": "Persistent multi-sensor anomaly or critical parameter breach requiring immediate operator response."
             }
         elif severity == "HIGH":
             return {
-                "route": "MONITOR",
-                "responsible_team": "Maintenance & Reliability",
+                "route": "INSPECT",
+                "responsible_team": "Maintenance Technician / Engineer",
+                "action": "Inspect the machine and schedule maintenance",
                 "reason": "Sustained parametric abnormality flagged for technical observation."
             }
         elif severity == "MEDIUM":
             return {
-                "route": "MONITOR",
-                "responsible_team": "Machining Cell Operator",
+                "route": "OBSERVE",
+                "responsible_team": "Machine Operator",
+                "action": "Observe the machine and monitor the condition",
                 "reason": "Moderate deviation requiring routine observation."
             }
         else: # LOW
             return {
-                "route": "IGNORE",
-                "responsible_team": "Diagnostics Log",
+                "route": "LOG_ONLY",
+                "responsible_team": "No immediate person",
+                "action": "Log the event and continue monitoring",
                 "reason": "Low-severity transient spike logged without operator dispatch."
             }

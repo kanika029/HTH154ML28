@@ -88,6 +88,7 @@ class FatigueFilter:
 
             cursor.execute('''
                 UPDATE alerts SET
+                    anomaly_type = ?,
                     severity = ?,
                     severity_score = ?,
                     reasons = ?,
@@ -96,9 +97,12 @@ class FatigueFilter:
                     suppressed_count = ?,
                     routing = ?,
                     responsible_team = ?,
+                    explanation = ?,
+                    root_cause_hint = ?,
                     updated_at = ?
                 WHERE id = ?
             ''', (
+                anomaly["anomaly_type"],
                 effective_severity,
                 effective_score,
                 json.dumps(reasons),
@@ -107,6 +111,8 @@ class FatigueFilter:
                 suppressed,
                 routing_info["route"],
                 routing_info["responsible_team"],
+                f"Active {anomaly['anomaly_type']} incident on {machine_id} ({sensor.upper()}). {correlation_info.get('explanation', '')}",
+                f"{root_cause_info['possible_cause']} ({root_cause_info['disclaimer']})",
                 now_iso,
                 alert_id
             ))

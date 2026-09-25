@@ -34,20 +34,23 @@ class SeverityEngine:
             score += 35
             reasons.append("Multi-sensor correlated operational disturbance")
         elif anomaly_type == "DROPOUT":
-            score += 25
+            score += 35
             reasons.append("Telemetry signal dropout / communication loss")
         elif anomaly_type == "DRIFT":
-            score += 20
+            score += 25
             reasons.append("Sustained parametric drift away from baseline")
         elif anomaly_type in ["STUCK", "STUCK SENSOR"]:
-            score += 18
+            score += 25
             reasons.append("Sensor output frozen / stuck transducer")
         elif anomaly_type == "SPIKE":
-            score += 15
+            score += 20
             reasons.append("Transient magnitude spike")
 
         # 2. Magnitude / Z-Score Contribution
-        if z_score >= 4.0 or baseline_dev >= 15.0:
+        if anomaly_type == "DROPOUT":
+            score += 20
+            reasons.append("Complete sensor signal loss (NULL telemetry packet)")
+        elif z_score >= 4.0 or baseline_dev >= 15.0:
             score += 25
             reasons.append(f"Large deviation magnitude (Z-score: {z_score:.1f}, Dev: {baseline_dev:.1f})")
         elif z_score >= 2.5 or baseline_dev >= 6.0:

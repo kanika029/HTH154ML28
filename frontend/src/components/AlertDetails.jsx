@@ -153,6 +153,41 @@ export function AlertDetails({ alert, onClose }) {
               )}
             </div>
           </div>
+
+          {/* Response Tier Action Card */}
+          <div className={`p-4 rounded-xl border ${
+            alert.severity === 'CRITICAL' ? 'bg-red-950/30 border-red-800/50' :
+            alert.severity === 'HIGH' ? 'bg-orange-950/30 border-orange-800/50' :
+            alert.severity === 'MEDIUM' ? 'bg-amber-950/30 border-amber-800/50' :
+            'bg-emerald-950/30 border-emerald-800/50'
+          }`}>
+            <h4 className="font-bold text-slate-200 mb-2 font-mono uppercase text-[11px] flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4" /> Response Tier Assignment
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+              <div>
+                <span className="text-slate-500 font-mono">SEVERITY</span>
+                <p className="font-bold mt-0.5">{
+                  alert.severity === 'CRITICAL' ? '🔴 CRITICAL' :
+                  alert.severity === 'HIGH' ? '🟠 HIGH' :
+                  alert.severity === 'MEDIUM' ? '🟡 MEDIUM' : '🟢 LOW'
+                }</p>
+              </div>
+              <div>
+                <span className="text-slate-500 font-mono">RESPONSIBLE</span>
+                <p className="font-bold mt-0.5 text-blue-300">{alert.responsible_team || 'No immediate person'}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 font-mono">REQUIRED ACTION</span>
+                <p className="font-bold mt-0.5 text-slate-200">{
+                  alert.severity === 'CRITICAL' ? 'Take immediate action and check/stop the machine if required' :
+                  alert.severity === 'HIGH' ? 'Inspect the machine and schedule maintenance' :
+                  alert.severity === 'MEDIUM' ? 'Observe the machine and monitor the condition' :
+                  'Log the event and continue monitoring'
+                }</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Modal Footer */}

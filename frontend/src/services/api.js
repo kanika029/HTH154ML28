@@ -50,3 +50,13 @@ export async function fetchReportSummary() {
   if (!res.ok) throw new Error('Failed to fetch report summary');
   return res.json();
 }
+
+export async function controlMachine(machineId, action) {
+  const res = await fetch('/api/machines/control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ machine_id: machineId, action: action })
+  });
+  if (!res.ok) throw new Error('Failed to send machine control command');
+  return res.json();
+}
